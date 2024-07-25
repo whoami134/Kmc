@@ -225,4 +225,37 @@ class Leaderboard(Resource):
         return leaderboard, 200
 
 api.add_resource(Leaderboard, '/leaderboard')
+class Session(Resource):
+    @jwt_required()
+    def post(self):
+        user_id = get_jwt_identity()
+        data = request.get_json()
+        counselor_id = data['counselor_id']
+        date = data['date']
+
+        session = {
+            "counselor_id": ObjectId(counselor_id),
+            "student_id": ObjectId(user_id),
+            "date": date,
+            "status": "pending",
+            "notes": ""
+        }
+        session_id = db.sessions.insert_one(session).inserted_id
+        return {"message": "Session created successfully", "session_id": str(session_id)}, 201
+
+api.add_resource(Session, '/session')
+class Counselors(Resource):
+    @jwt_required()
+    def get(self):
+        counselors = db.users.find({"role": "counselor", "edu_verified": True}, {"password": 0})
+        result = []
+        for counselor in counselors:
+            result.append({
+                "id": str(counselor["_id"]),
+                "name": counselor["name"],
+                "profile": counselor["profile"]
+            })
+        return result, 200
+
+api.add_resource(Counselors, '/counselors')
 
