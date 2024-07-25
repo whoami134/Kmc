@@ -27,84 +27,6 @@ from flask import request
 from flask_restful import Resource
 from bson.objectid import ObjectId
 
-class Register(Resource):
-    def post(self):
-        data = request.get_json()
-        name = data['name']
-        email = data['email']
-        password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
-        role = data['role']
-        edu_verified = False
-
-        user = {
-            "name": name,
-            "email": email,
-            "password": password,
-            "role": role,
-            "edu_verified": edu_verified,
-            "profile": {
-                "bio": "",
-                "education": "",
-                "experience": "",
-                "ratings": [],
-                "average_rating": 0
-            }
-        }
-        user_id = db.users.insert_one(user).inserted_id
-        return {"message": "User registered successfully", "user_id": str(user_id)}, 201
-
-api.add_resource(Register, '/register')
-from flask_jwt_extended import create_access_token
-
-class Login(Resource):
-    def post(self):
-        data = request.get_json()
-        email = data['email']
-        password = data['password']
-        
-        user = db.users.find_one({"email": email})
-        if user and bcrypt.check_password_hash(user['password'], password):
-            access_token = create_access_token(identity=str(user['_id']))
-            return {"access_token": access_token}, 200
-        return {"message": "Invalid credentials"}, 401
-
-api.add_resource(Login, '/login')
-from flask_jwt_extended import jwt_required, get_jwt_identity
-
-class Profile(Resource):
-    @jwt_required()
-    def get(self):
-        user_id = get_jwt_identity()
-        user = db.users.find_one({"_id": ObjectId(user_id)}, {"password": 0})
-        if user:
-            return user, 200
-        return {"message": "User not found"}, 404
-
-    @jwt_required()
-    def put(self):
-        user_id = get_jwt_identity()
-        data = request.get_json()
-        update_fields = {}
-        if 'bio' in data:
-            update_fields['profile.bio'] = data['bio']
-        if 'education' in data:
-            update_fields['profile.education'] = data['education']
-        if 'experience' in data:
-            update_fields['profile.experience'] = data['experience']
-        
-        db.users.update_one({"_id": ObjectId(user_id)}, {"$set": update_fields})
-        return {"message": "Profile updated successfully"}, 200
-
-api.add_resource(Profile, '/profile')
-from flask_mail import Mail, Message
-
-app.config['MAIL_SERVER'] = 'smtp.example.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USERNAME'] = 'your-email@example.com'
-app.config['MAIL_PASSWORD'] = 'your-email-password'
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USE_SSL'] = False
-
 from itsdangerous import URLSafeTimedSerializer
 
 s = URLSafeTimedSerializer(app.config['SECRET_KEY'])
@@ -141,6 +63,7 @@ class Register(Resource):
         mail.send(msg)
 
         return {"message": "User registered successfully. Check your email to verify your account.", "user_id": str(user_id)}, 201
+api.add_resource(Register, '/register')
 class ConfirmEmail(Resource):
     def get(self, token):
         try:
@@ -225,23 +148,58 @@ class Leaderboard(Resource):
         return leaderboard, 200
 
 api.add_resource(Leaderboard, '/leaderboard')
-class Session(Resource):
-    @jwt_required()
+
+from flask_jwt_extended import create_access_token
+
+class Login(Resource):
     def post(self):
+        data = request.get_json()
+        email = data['email']
+        password = data['password']
+        
+        user = db.users.find_one({"email": email})
+        if user and bcrypt.check_password_hash(user['password'], password):
+            access_token = create_access_token(identity=str(user['_id']))
+            return {"access_token": access_token}, 200
+        return {"message": "Invalid credentials"}, 401
+
+api.add_resource(Login, '/login')
+from flask_jwt_extended import jwt_required, get_jwt_identity
+
+class Profile(Resource):
+    @jwt_required()
+    def get(self):
+        user_id = get_jwt_identity()
+        user = db.users.find_one({"_id": ObjectId(user_id)}, {"password": 0})
+        if user:
+            return user, 200
+        return {"message": "User not found"}, 404
+
+    @jwt_required()
+    def put(self):
         user_id = get_jwt_identity()
         data = request.get_json()
-        counselor_id = data['counselor_id']
-        date = data['date']
+        update_fields = {}
+        if 'bio' in data:
+            update_fields['profile.bio'] = data['bio']
+        if 'education' in data:
+            update_fields['profile.education'] = data['education']
+        if 'experience' in data:
+            update_fields['profile.experience'] = data['experience']
+        
+        db.users.update_one({"_id": ObjectId(user_id)}, {"$set": update_fields})
+        return {"message": "Profile updated successfully"}, 200
 
-        session = {
-            "counselor_id": ObjectId(counselor_id),
-            "student_id": ObjectId(user_id),
-            "date": date,
-            "status": "pending",
-            "notes": ""
-        }
-        session_id = db.sessions.insert_one(session).inserted_id
-        return {"message": "Session created successfully", "session_id": str(session_id)}, 201
+api.add_resource(Profile, '/profile')
+from flask_mail import Mail, Message
+
+app.config['MAIL_SERVER'] = 'smtp.example.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USERNAME'] = 'your-email@example.com'
+app.config['MAIL_PASSWORD'] = 'your-email-password'
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
+
 
 api.add_resource(Session, '/session')
 class Counselors(Resource):
