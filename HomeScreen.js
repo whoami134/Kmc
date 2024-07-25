@@ -32,6 +32,7 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.title}>Welcome, {user.name}</Text>
           <Text>Email: {user.email}</Text>
           <Text>Role: {user.role}</Text>
+          <Button title="Book a Session" onPress={() => navigation.navigate('BookSession')} />
           <Button title="Logout" onPress={handleLogout} />
         </>
       ) : (
