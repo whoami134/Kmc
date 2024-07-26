@@ -202,18 +202,5 @@ app.config['MAIL_USE_SSL'] = False
 
 
 api.add_resource(Session, '/session')
-class Counselors(Resource):
-    @jwt_required()
-    def get(self):
-        counselors = db.users.find({"role": "counselor", "edu_verified": True}, {"password": 0})
-        result = []
-        for counselor in counselors:
-            result.append({
-                "id": str(counselor["_id"]),
-                "name": counselor["name"],
-                "profile": counselor["profile"]
-            })
-        return result, 200
 
-api.add_resource(Counselors, '/counselors')
 
